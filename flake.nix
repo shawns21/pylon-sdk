@@ -33,23 +33,31 @@
             inherit (selected) url sha256;
           };
 
-          # autoPatchelfHook fixes the "Library not found" errors
-          # dpkg is required to extract the .deb files inside the tarball
           nativeBuildInputs = [ 
             pkgs.autoPatchelfHook 
             pkgs.dpkg 
           ];
 
-          # Dependencies found in the Basler binaries
+          # These cover the Qt, X11, Wayland, and core SDK dependencies
           buildInputs = [ 
             pkgs.stdenv.cc.cc.lib 
             pkgs.libusb1 
             pkgs.glib
             pkgs.zlib
             pkgs.libxml2
+            pkgs.libGL
+            pkgs.libGLU
+            pkgs.libxcb
+            pkgs.xorg.libX11
+            pkgs.xorg.libXrender
+            pkgs.xorg.libXi
+            pkgs.libxkbcommon
+            pkgs.libdrm
+            pkgs.libtiff
+            pkgs.wayland
+            pkgs.mesa
           ];
 
-          # Manual unpack because the tarball contains multiple .deb files
           unpackPhase = ''
             mkdir -p source
             tar -C source -xvf $src
@@ -57,23 +65,29 @@
             
             echo "Extracting Debian packages..."
             for f in *.deb; do
-              # We use --extract and pipe to dev/null to ignore the permission errors
-              # that happen with the CodeMeter setuid binaries.
+              # || true ignores the SUID permission errors from CodeMeter
               dpkg-deb -x "$f" . || true
             done
           '';
-	  installPhase = ''
+
+          installPhase = ''
             mkdir -p $out
+            
+            # Move extracted contents from the standard deb path to the Nix store path
             if [ -d "./opt/pylon" ]; then
               cp -r ./opt/pylon/* $out/
             else
               cp -r * $out/
             fi
+
+            # Fix for specific libtiff.so.5 requirement if only .so.6 is found
+            mkdir -p $out/lib
+            ln -s ${pkgs.libtiff}/lib/libtiff.so $out/lib/libtiff.so.5 || true
             
-            # Remove any existing broken symlinks or high-privilege bits 
-            # that might interfere with the Nix store
+            # Ensure the store path is writable for the patching phase
             chmod -R u+w $out
           '';
+
           meta = {
             description = "Basler Pylon SDK";
             homepage = "https://www.baslerweb.com";
