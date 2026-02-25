@@ -11,8 +11,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         
-        # Configuration for the different architectures
-	pylonInfo = {
+        pylonInfo = {
           "x86_64-linux" = {
             url = "https://github.com/shawns21/pylon-sdk/releases/download/v1.0.0/pylon-7.5.0.15658-linux-x86_64_debs.tar.gz";
             sha256 = "1xwa62g4j82m7cn028xyrz1kcscbj1rwdb0w24mbryy9xjja8cc8";
@@ -28,26 +27,61 @@
       {
         packages.default = pkgs.stdenv.mkDerivation {
           pname = "pylon-sdk";
-          version = "7.5.0";
+          version = "7.5.0.15658";
 
           src = pkgs.fetchurl {
             inherit (selected) url sha256;
           };
 
-          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+          # autoPatchelfHook fixes the "Library not found" errors
+          # dpkg is required to extract the .deb files inside the tarball
+          nativeBuildInputs = [ 
+            pkgs.autoPatchelfHook 
+            pkgs.dpkg 
+          ];
+
+          # Dependencies found in the Basler binaries
           buildInputs = [ 
             pkgs.stdenv.cc.cc.lib 
             pkgs.libusb1 
             pkgs.glib
             pkgs.zlib
+            pkgs.libxml2
           ];
 
-          # We expect the tarball to contain the /opt/pylon contents directly
+          # Manual unpack because the tarball contains multiple .deb files
+          unpackPhase = ''
+            mkdir -p source
+            tar -C source -xvf $src
+            cd source
+            
+            echo "Extracting Debian packages..."
+            for f in *.deb; do
+              dpkg-deb -x "$f" .
+            done
+          '';
+
           installPhase = ''
             mkdir -p $out
-            cp -r * $out/
-            chmod -R +w $out/bin $out/lib64 2>/dev/null || true
+            
+            # Basler debs extract to ./opt/pylon
+            if [ -d "./opt/pylon" ]; then
+              echo "Moving files from /opt/pylon to $out"
+              cp -r ./opt/pylon/* $out/
+            else
+              echo "Warning: /opt/pylon not found, copying everything"
+              cp -r * $out/
+            fi
+            
+            # Ensure binaries are executable for patchelf
+            chmod -R +w $out
           '';
+
+          meta = {
+            description = "Basler Pylon SDK";
+            homepage = "https://www.baslerweb.com";
+            license = pkgs.lib.licenses.unfree;
+          };
         };
       }
     );
