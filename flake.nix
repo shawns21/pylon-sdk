@@ -12,13 +12,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         
         # Configuration for the different architectures
-        pylonInfo = {
+	pylonInfo = {
           "x86_64-linux" = {
-            url = "https://github.com/shawns21/pylon-sdk/releases/download/v1.0.0/pylon-7.5.0-x86_64-prebuilt.tar.gz";
+            url = "https://github.com/shawns21/pylon-sdk/releases/download/v1.0.0/pylon-7.5.0.15658-linux-x86_64_debs.tar.gz";
             sha256 = "1xwa62g4j82m7cn028xyrz1kcscbj1rwdb0w24mbryy9xjja8cc8";
           };
           "aarch64-linux" = {
-            url = "https://github.com/shawns21/pylon-sdk/releases/download/v1.0.0/pylon-7.5.0-arm64-prebuilt.tar.gz";
+            url = "https://github.com/shawns21/pylon-sdk/releases/download/v1.0.0/pylon-7.5.0.15658-linux-aarch64_debs.tar.gz";
             sha256 = "1ar0imqfmrkip75sqxl7ghr65v8wr0sxj6cifwr9wr5kwf2lbm4q";
           };
         };
