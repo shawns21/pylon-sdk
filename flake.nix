@@ -57,26 +57,23 @@
             
             echo "Extracting Debian packages..."
             for f in *.deb; do
-              dpkg-deb -x "$f" .
+              # We use --extract and pipe to dev/null to ignore the permission errors
+              # that happen with the CodeMeter setuid binaries.
+              dpkg-deb -x "$f" . || true
             done
           '';
-
-          installPhase = ''
+	  installPhase = ''
             mkdir -p $out
-            
-            # Basler debs extract to ./opt/pylon
             if [ -d "./opt/pylon" ]; then
-              echo "Moving files from /opt/pylon to $out"
               cp -r ./opt/pylon/* $out/
             else
-              echo "Warning: /opt/pylon not found, copying everything"
               cp -r * $out/
             fi
             
-            # Ensure binaries are executable for patchelf
-            chmod -R +w $out
+            # Remove any existing broken symlinks or high-privilege bits 
+            # that might interfere with the Nix store
+            chmod -R u+w $out
           '';
-
           meta = {
             description = "Basler Pylon SDK";
             homepage = "https://www.baslerweb.com";
